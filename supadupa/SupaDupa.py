@@ -1,6 +1,9 @@
+#!/usr/bin/env python
+
 import sys
 import json
 import ObjCWriter
+import argparse
 
 def handleJsonString(jsonStr):
     return jsonDictToClasses(json.loads(jsonStr), {})
@@ -28,12 +31,12 @@ def addClassFromJson(json, objColl, className):
     return objColl
 
 if __name__ == '__main__':
-    if not len(sys.argv) >= 2:
-        """print "Please pass a json file."
-        sys.exit(1)"""
-        jsonFileName = "4sq_test.json"
-    else:
-        jsonFileName = sys.argv[1]
+
+    parser = argparse.ArgumentParser(description="Convert json structures into classes.")
+    parser.add_argument("file", nargs=1)
+    args = vars(parser.parse_args())
+
+    jsonFileName = args["file"][0]
     
     jsonFile = file(jsonFileName, 'r')
     jsonStr = jsonFile.read()
