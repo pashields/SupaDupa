@@ -1,0 +1,77 @@
+{
+    "checkin": {
+        "id": "4fdde22ce4b01998033441d6",
+        "createdAt": 1339941420,
+        "type": "checkin",
+        "timeZoneOffset": -240,
+        "venue": {
+            "id": "4ad87ddef964a520c01121e3",
+            "name": "Foster's Market",
+            "contact": {
+                "phone": "9194893944",
+                "formattedPhone": "(919) 489-3944"
+            },
+            "location": {
+                "address": "2694 Durham Chapel Hill Blvd",
+                "crossStreet": "btwn Legion Ave & Bedford St",
+                "lat": 35.97430008819881,
+                "lng": -78.93154511729202,
+                "postalCode": "27707",
+                "city": "Durham",
+                "state": "NC",
+                "country": "United States"
+            },
+            "categories": [
+                {
+                    "id": "4bf58dd8d48988d1c5941735",
+                    "name": "Sandwich Place",
+                    "pluralName": "Sandwich Places",
+                    "shortName": "Sandwiches",
+                    "icon": {
+                        "prefix": "https://foursquare.com/img/categories_v2/food/sandwiches_",
+                        "suffix": ".png"
+                    },
+                    "primary": true
+                }
+            ],
+            "verified": false,
+            "stats": {
+                "checkinsCount": 1989,
+                "usersCount": 1037,
+                "tipCount": 14
+            },
+            "url": "http://fostersmarket.com/",
+            "likes": {
+                "count": 0,
+                "groups": []
+            },
+            "like": false,
+            "menu": {
+                "type": "foodAndBeverage",
+                "url": "https://foursquare.com/v/fosters-market/4ad87ddef964a520c01121e3/menu",
+                "mobileUrl": "https://foursquare.com/v/4ad87ddef964a520c01121e3/device_menu"
+            },
+            "beenHere": {
+                "count": 7,
+                "marked": false
+            }
+        },
+        "likes": {
+            "count": 0,
+            "groups": []
+        },
+        "like": false,
+        "photos": {
+            "count": 0,
+            "items": []
+        },
+        "comments": {
+            "count": 0,
+            "items": []
+        },
+        "source": {
+            "name": "foursquare for iPhone",
+            "url": "https://foursquare.com/download/#/iphone"
+        }
+    }
+}
