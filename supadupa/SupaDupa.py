@@ -9,33 +9,37 @@ def handleJsonString(jsonStr, conf):
     return jsonDictToClasses(json.loads(jsonStr), {}, conf)
 
 def jsonDictToClasses(json, objColl, conf):
-    writer = conf.getWriter()
     for k,v in json.iteritems():
         if isinstance(v, dict):
             addClassFromJson(v, objColl, k, conf)
         else:
             print "Bad formatting: Top level should be a JSON object containing the classes to convert"
             sys.exit(1)
-    return writer.writeClasses(objColl)
+    return conf.getWriter().writeClasses(objColl)
 
 def addClassFromJson(json, objColl, className, conf):
     className = conf.mapKey(className)
-    writer = conf.getWriter()
     objColl[className] = {}
     for k,v in json.iteritems():
         k = conf.mapKey(k)
         if conf.classOverrideForProp(k) is not None:
-            objColl[className][k] = unicode(conf.classOverrideForProp(k))
+            objColl[className][k] = makeClassName(conf.classOverrideForProp(k))
         elif isinstance(v, dict):
-            objColl[className][k] = unicode(k)
+            objColl[className][k] = makeClassName(k)
             addClassFromJson(v, objColl, k, conf)
         elif isinstance(v, list):
-            objColl[className][k] = unicode(writer.defaultClassTypes[str(list)])
-        elif writer.defaultClassTypes.has_key(str(type(v))):
-            objColl[className][k] = unicode(writer.defaultClassTypes[str(type(v))])
+            objColl[className][k] = getClassNameFromWriter(list, conf)
+        elif conf.getWriter().defaultClassTypes.has_key(str(type(v))):
+            objColl[className][k] = getClassNameFromWriter(type(v), conf)
         else:
-            raise Exception("Unknown class type: %s" % str(type(v)))
+            raise Exception("Class type '%s' not supported by language '%s'" % (str(type(v)), conf.lang))
     return objColl
+
+def makeClassName(name):
+    return unicode(name)
+
+def getClassNameFromWriter(pythonClass, conf):
+    return unicode(conf.getWriter().defaultClassTypes[str(pythonClass)])
 
 class SupaDupaConf:
     def __init__(self, lang, keymap, overrides):
@@ -70,8 +74,7 @@ if __name__ == '__main__':
     parser.add_argument("-p", dest="overrides", default="{}", help="A JSON object representing overrides for class type of certain properties. Use this to prevent the creation of undesired classes or to enforce the use of user classes created outside of the JSON.")
     args = vars(parser.parse_args())
 
-    jsonFileName = args["file"][0]
-    
+    jsonFileName = args["file"][0]    
     jsonFile = file(jsonFileName, 'r')
     jsonStr = jsonFile.read()
 
