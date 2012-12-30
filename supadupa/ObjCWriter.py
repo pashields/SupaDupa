@@ -3,7 +3,8 @@ defaultClassTypes = {
     str(list) : "NSArray",
     str(int) : "NSNumber",
     str(float) : "NSNumber",
-    str(bool) : "NSNumber"
+    str(bool) : "NSNumber",
+    str(None.__class__) : "id"
 }
 
 def writeClasses(classDict):
