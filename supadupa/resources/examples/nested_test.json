@@ -1,0 +1,8 @@
+{
+    "Outer" : {
+	"inty" : 1,
+	"inner" : {
+	    "stringy" : "Hi there"
+	}
+    }
+}
