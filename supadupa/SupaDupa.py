@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 
-import sys
-import json
-import ObjCWriter
-import argparse
+import sys, os, json, argparse
+import SupaDupaResult, ObjCWriter
 
 def handleJsonString(jsonStr, conf):
     return jsonDictToClasses(json.loads(jsonStr), {}, conf)
@@ -15,7 +13,7 @@ def jsonDictToClasses(json, objColl, conf):
         else:
             print "Bad formatting: Top level should be a JSON object containing the classes to convert"
             sys.exit(1)
-    return conf.getWriter().writeClasses(objColl)
+    return conf.getWriter(objColl).getResult()
 
 def addClassFromJson(json, objColl, className, conf):
     className = conf.mapKey(className)
@@ -29,7 +27,7 @@ def addClassFromJson(json, objColl, className, conf):
             addClassFromJson(v, objColl, k, conf)
         elif isinstance(v, list):
             objColl[className][k] = getClassNameFromWriter(list, conf)
-        elif conf.getWriter().defaultClassTypes.has_key(str(type(v))):
+        elif conf.getWriteClass().defaultClassTypes.has_key(str(type(v))):
             objColl[className][k] = getClassNameFromWriter(type(v), conf)
         else:
             raise Exception("Class type '%s' not supported by language '%s'" % (str(type(v)), conf.lang))
@@ -39,14 +37,16 @@ def makeClassName(name):
     return unicode(name)
 
 def getClassNameFromWriter(pythonClass, conf):
-    return unicode(conf.getWriter().defaultClassTypes[str(pythonClass)])
+    return unicode(conf.getWriteClass().defaultClassTypes[str(pythonClass)])
 
 class SupaDupaConf:
-    def __init__(self, lang, keymap, overrides):
+    def __init__(self, lang, keymap, overrides, toFile, outputDir):
         self.lang = lang
         self.keymap = keymap
         self.overrides = overrides
         self.writers = {"objc": ObjCWriter}
+        self.toFile = toFile
+        self.outputDir = outputDir
 
         if lang not in self.writers.keys():
             print "Unknown language: {}".format(lang)
@@ -62,16 +62,35 @@ class SupaDupaConf:
             return self.overrides[prop]
         return None
 
-    def getWriter(self):
+    def getWriteClass(self):
         return self.writers[self.lang]
 
-if __name__ == '__main__':
+    def getWriter(self, classDict):
+        writerClass = self.getWriteClass()
+        return writerClass.Writer(classDict, conf.getOutputDir())
 
+    def getOutputDir(self):
+        if self.outputDir:
+            return self.outputDir
+        if self.toFile:
+            return os.getcwd()
+        return None
+
+# Need to-file flag, output dir option, generated methods (and flag), interface for writers
+if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Convert json structures into classes.")
-    parser.add_argument("file", nargs=1, help="Path to the json file that you wish to base your class on. The top level structure should be a JSON object where each key is the name of a class you wish to generate and the corresponding value is an instance of that class.")
-    parser.add_argument("output_lang", nargs=1, help="The output language that should be used. Current options are [objc].")
-    parser.add_argument("-k", dest="keymap", default="{}", help="A JSON object representing a mapping of key names. Use this to override key names at the language level. Example: {\"int\":\"anInt\"} will change an instances of \"int\" as a class or property name to \"anInt\".")
-    parser.add_argument("-p", dest="overrides", default="{}", help="A JSON object representing overrides for class type of certain properties. Use this to prevent the creation of undesired classes or to enforce the use of user classes created outside of the JSON.")
+    parser.add_argument("file", nargs=1, 
+                        help="Path to the json file that you wish to base your class on. The top level structure should be a JSON object where each key is the name of a class you wish to generate and the corresponding value is an instance of that class.")
+    parser.add_argument("output_lang", nargs=1, 
+                        help="The output language that should be used. Current options are [objc].")
+    parser.add_argument("-k", "--keymap", dest="keymap", default="{}", 
+                        help="A JSON object representing a mapping of key names. Use this to override key names at the language level. Example: {\"int\":\"anInt\"} will change an instances of \"int\" as a class or property name to \"anInt\".")
+    parser.add_argument("-p", "--class-overrides", dest="overrides", default="{}", 
+                        help="A JSON object representing overrides for class type of certain properties. Use this to prevent the creation of undesired classes or to enforce the use of user classes created outside of the JSON.")
+    parser.add_argument("-f", "--to-files", dest="tofile", action="store_true", default=False, 
+                        help="Pass this option to write the output classes to files.")
+    parser.add_argument("-o", "--output-dir", dest="outputdir", default=None, 
+                        help="Directory to write the output class files to. Only useful with '-f'. Defaults to the current working directory.")
     args = vars(parser.parse_args())
 
     jsonFileName = args["file"][0]    
@@ -79,6 +98,13 @@ if __name__ == '__main__':
     jsonStr = jsonFile.read()
 
     conf = SupaDupaConf(args["output_lang"][0], json.loads(args["keymap"]),
-                        json.loads(args["overrides"]))
+                        json.loads(args["overrides"]), args["tofile"], 
+                        args["outputdir"])
 
-    print handleJsonString(jsonStr, conf)
+    supaDupaResult = handleJsonString(jsonStr, conf)
+    jsonFile.close()
+
+    if conf.getOutputDir():
+        supaDupaResult.writeFiles(conf.getOutputDir())
+    else:
+        supaDupaResult.writeToStdOut()
