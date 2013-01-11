@@ -27,6 +27,8 @@ def addClassFromJson(json, objColl, className, conf):
             addClassFromJson(v, objColl, k, conf)
         elif isinstance(v, list):
             objColl[className][k] = getClassNameFromWriter(list, conf)
+            if len(v) > 0:
+                addClassFromJson(v[0], objColl, convertNameFromArray(k), conf)
         elif conf.getWriteClass().defaultClassTypes.has_key(str(type(v))):
             objColl[className][k] = getClassNameFromWriter(type(v), conf)
         else:
@@ -38,6 +40,12 @@ def makeClassName(name):
 
 def getClassNameFromWriter(pythonClass, conf):
     return unicode(conf.getWriteClass().defaultClassTypes[str(pythonClass)])
+
+def convertNameFromArray(name):
+    if name[-1:] == u's':
+        return name[:-1]
+    else:
+        return name
 
 class SupaDupaConf:
     def __init__(self, lang, keymap, overrides, toFile, outputDir):
