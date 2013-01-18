@@ -1,42 +1,46 @@
 #!/usr/bin/env python
 
 import sys, os, json, argparse
-import SupaDupaResult, ObjCWriter
+import SupaDupaResult, SupaDupaClassDef, ObjCWriter
 
 def handleJsonString(jsonStr, conf):
-    return jsonDictToClasses(json.loads(jsonStr), {}, conf)
+    return jsonDictToClasses(json.loads(jsonStr), conf)
 
-def jsonDictToClasses(json, objColl, conf):
-    for k,v in json.iteritems():
-        if isinstance(v, dict):
-            addClassFromJson(v, objColl, k, conf)
-        else:
-            print "Bad formatting: Top level should be a JSON object containing the classes to convert"
-            sys.exit(1)
+def jsonDictToClasses(json, conf):
+    objColl = {}
+    addClassFromJson(json, objColl, None, conf)
     return conf.getWriter(objColl).getResult()
 
 def addClassFromJson(json, objColl, className, conf):
-    className = conf.mapKey(className)
-    objColl[className] = {}
+    classDef = None
+    if className is not None:
+        className = conf.mapClassName(className)
+        classDef = SupaDupaClassDef.SupaDupaClassDef(className)
+        objColl[className] = classDef
     for k,v in json.iteritems():
-        k = conf.mapKey(k)
-        if conf.classOverrideForProp(k) is not None:
-            objColl[className][k] = makeClassName(conf.classOverrideForProp(k))
+        proccessedKey = conf.mapKey(k)
+        if conf.classOverrideForProp(proccessedKey) is not None:
+            override = conf.classOverrideForProp(proccessedKey)
+            classDef.addProperty(proccessedKey, 
+                                 conf.getWriteClass().formatClassName(override))
         elif isinstance(v, dict):
-            objColl[className][k] = makeClassName(k)
-            addClassFromJson(v, objColl, k, conf)
+            formattedClassName = conf.getWriteClass().formatClassName(k)
+            if classDef is not None:
+                containedClassName = conf.mapClassName(formattedClassName)
+                classDef.addProperty(proccessedKey, containedClassName)
+                classDef.addDependency(containedClassName)
+            addClassFromJson(v, objColl, formattedClassName, conf)
         elif isinstance(v, list):
-            objColl[className][k] = getClassNameFromWriter(list, conf)
+            classDef.addProperty(proccessedKey, getClassNameFromWriter(list, conf))
             if len(v) > 0:
-                addClassFromJson(v[0], objColl, convertNameFromArray(k), conf)
+                addClassFromJson(v[0], objColl, 
+                                 convertNameFromArray(proccessedKey), conf)
         elif conf.getWriteClass().defaultClassTypes.has_key(str(type(v))):
-            objColl[className][k] = getClassNameFromWriter(type(v), conf)
+            classDef.addProperty(proccessedKey, 
+                                 getClassNameFromWriter(type(v), conf))
         else:
             raise Exception("Class type '%s' not supported by language '%s'" % (str(type(v)), conf.lang))
     return objColl
-
-def makeClassName(name):
-    return unicode(name)
 
 def getClassNameFromWriter(pythonClass, conf):
     return unicode(conf.getWriteClass().defaultClassTypes[str(pythonClass)])
@@ -48,9 +52,10 @@ def convertNameFromArray(name):
         return name
 
 class SupaDupaConf:
-    def __init__(self, lang, keymap, overrides, toFile, outputDir):
+    def __init__(self, lang, keymap, classNameMap, overrides, toFile, outputDir):
         self.lang = lang
         self.keymap = keymap
+        self.classNameMap = classNameMap
         self.overrides = overrides
         self.writers = {"objc": ObjCWriter}
         self.toFile = toFile
@@ -64,6 +69,11 @@ class SupaDupaConf:
         if key in self.keymap:
             return self.keymap[key]
         return key
+
+    def mapClassName(self, className):
+        if className in self.classNameMap:
+            return self.classNameMap[className]
+        return className
 
     def classOverrideForProp(self, prop):
         if prop in self.overrides:
@@ -93,6 +103,8 @@ if __name__ == '__main__':
                         help="The output language that should be used. Current options are [objc].")
     parser.add_argument("-k", "--keymap", dest="keymap", default="{}", 
                         help="A JSON object representing a mapping of key names. Use this to override key names at the language level. Example: {\"int\":\"anInt\"} will change an instances of \"int\" as a class or property name to \"anInt\".")
+    parser.add_argument("-c", "--class-namemap", dest="class-namemap", default="{}",
+                        help="A JSON object representing a mapping of class names. Use this to override class names. See also: -k, --keymap.")
     parser.add_argument("-p", "--class-overrides", dest="overrides", default="{}", 
                         help="A JSON object representing overrides for class type of certain properties. Use this to prevent the creation of undesired classes or to enforce the use of user classes created outside of the JSON.")
     parser.add_argument("-f", "--to-files", dest="tofile", action="store_true", default=False, 
@@ -106,6 +118,7 @@ if __name__ == '__main__':
     jsonStr = jsonFile.read()
 
     conf = SupaDupaConf(args["output_lang"][0], json.loads(args["keymap"]),
+                        json.loads(args["class-namemap"]),
                         json.loads(args["overrides"]), args["tofile"], 
                         args["outputdir"])
 
